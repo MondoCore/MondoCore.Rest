@@ -2,10 +2,12 @@
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+
 using MondoCore.Common;
-using Newtonsoft.Json;
+using MondoCore.Collections;
 
 namespace MondoCore.Rest
 {
@@ -64,21 +66,21 @@ namespace MondoCore.Rest
         #region IRestApi
 
         /*************************************************************************/
-        public async Task SendRequest<TRequest>(HttpMethod method, string url, TRequest? content = default(TRequest?), object? headers = null)
+        public async Task SendRequest<TRequest>(HttpMethod method, string url, TRequest? content = default(TRequest?), object? headers = null, CancellationToken cancellationToken = default)
         {
-            await InternalSendRequest(method, url, content, headers);
+            await InternalSendRequest(method, url, content, headers, cancellationToken);
         }
 
         /*************************************************************************/
-        public async Task<TResponse> SendRequest<TRequest, TResponse>(HttpMethod method, string url, TRequest? content = default(TRequest?), object? headers = null)
+        public async Task<TResponse> SendRequest<TRequest, TResponse>(HttpMethod method, string url, TRequest? content = default(TRequest?), object? headers = null, CancellationToken cancellationToken = default)
         {
-            var response = await InternalSendRequest(method, url, content, headers);
+            var response = await InternalSendRequest(method, url, content, headers, cancellationToken);
             var result   = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
             if(typeof(TResponse).Name == "String")
                 return (TResponse)((object)result);
 
-            return JsonConvert.DeserializeObject<TResponse>(result)!;
+            return JsonSerializer.Deserialize<TResponse>(result, new JsonSerializerOptions { })!;
         }
 
         #endregion
@@ -86,36 +88,38 @@ namespace MondoCore.Rest
         #region Private
 
         /*************************************************************************/
-        private static void AddHeaders(HttpRequestMessage request, IDictionary<string, string> headers)
+        private static void AddHeaders(HttpRequestMessage request, IReadOnlyDictionary<string, string?>? headers)
         {
             if(headers != null)
             {
                 foreach (var kv in headers)
-                    request.Headers.Add(kv.Key, kv.Value);
+                    if(kv.Value != null)
+                        request.Headers.Add(kv.Key, kv.Value);
             }
 
             return;
         }
 
         /*************************************************************************/
-        protected virtual async Task<HttpResponseMessage> InternalSendRequest<TRequest>(HttpMethod method, string url, TRequest content, object? headers)
+        protected virtual async Task<HttpResponseMessage> InternalSendRequest<TRequest>(HttpMethod method, string url, TRequest content, object? headers, CancellationToken cancellationToken)
         {
-            using var clientManager = _clientFactory.CreateClient();
-            var       client        = clientManager.Client;
-            var       request       = new HttpRequestMessage(method, url);
-            using var tokenSource   = new CancellationTokenSource();
+            using var clientManager       = _clientFactory.CreateClient();
+            var       client              = clientManager.Client;
+            var       request             = new HttpRequestMessage(method, url);
+            using var tokenSource         = new CancellationTokenSource();
+            using var linkedCancellation  = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, tokenSource.Token);
 
             if(_timeout != 0)
                 tokenSource.CancelAfter(TimeSpan.FromMilliseconds(_timeout));
 
             if(headers != null)
-                AddHeaders(request, headers.ToStringDictionary());
+                AddHeaders(request, headers.ToReadOnlyStringDictionary());
 
             if(_headerFactory != null)
             { 
                 var dHeaders = await _headerFactory.GetHeaders(_name).ConfigureAwait(false);
 
-                AddHeaders(request, dHeaders);
+                AddHeaders(request, dHeaders.ToReadOnlyStringDictionary());
             }
 
             // Set up the content
@@ -132,7 +136,7 @@ namespace MondoCore.Rest
             }
 
             // Send the request
-            var response = await client.SendAsync(request, tokenSource.Token).ConfigureAwait(false);
+            var response = await client.SendAsync(request, linkedCancellation.Token).ConfigureAwait(false);
 
             // Ensure the request was successful (or throw exception)
             await CheckStatusCode(response, url, headers);
@@ -169,7 +173,7 @@ namespace MondoCore.Rest
 
                 if (responseMsg?.Content?.Headers?.ContentType?.MediaType == "application/problem+json")
                 {
-                    var innerError = JsonConvert.DeserializeObject<JsonProblem>(responseStr);
+                    var innerError = JsonSerializer.Deserialize<JsonProblem>(responseStr);
 
                     if(!string.IsNullOrWhiteSpace(innerError?.title))
                     {

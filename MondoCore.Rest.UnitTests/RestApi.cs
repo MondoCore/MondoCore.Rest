@@ -44,7 +44,7 @@ namespace MondoCore.Rest.UnitTests
 
             using var api = CreateFactory(typed);
 
-            SetUpGet(response);
+            SetUpGet(response, fixQuotes: false);
 
             var result = await api.Get<string>("/test/1");
 
@@ -52,10 +52,10 @@ namespace MondoCore.Rest.UnitTests
         }
 
         [TestMethod]
-        [DataRow("Bob's your uncle", false)]
-        [DataRow("Fred's your aunt", false)]
-        [DataRow("Bob's your uncle", true)]
-        [DataRow("Fred's your aunt", true)]
+        [DataRow("Bob is your uncle", false)]
+        [DataRow("Fred is your aunt", false)]
+        [DataRow("Bob is your uncle", true)]
+        [DataRow("Fred is your aunt", true)]
         public async Task RestApi_Get_text(string response, bool typed)
         {
             using var api = CreateFactory(typed);
@@ -68,7 +68,7 @@ namespace MondoCore.Rest.UnitTests
         }
 
         [TestMethod]
-        [DataRow("Bob's your uncle", false)]
+        [DataRow("Bob is your uncle", false)]
         public async Task RestApi_Get_text_wdelay(string response, bool typed)
         {
             using var api = CreateFactory(typed);
@@ -87,18 +87,19 @@ namespace MondoCore.Rest.UnitTests
         {
             using var api = CreateFactory(typed);
 
-            SetUpGet("{ type: 'blah', title: '" + msg + "', detail: 'Error'}", (int)statusCode, "application/problem+json");
+            SetUpGet("{ 'type': 'blah', 'title': '" + msg + "', 'detail': 'Error'}", (int)statusCode, "application/problem+json");
 
-            var ex = await Assert.ThrowsExceptionAsync<RestException>( async ()=> await api.Get<string>("/test/1"));
+            var ex = await Assert.ThrowsAsync<RestException>( async ()=> await api.Get<string>("/test/1"));
 
             Assert.IsNotNull(ex);
+            Assert.Contains(msg, ex.Response);
             Assert.AreEqual(msg, ex.Message);
             Assert.AreEqual(statusCode, ex.StatusCode);
         }
 
         [TestMethod]
-        [DataRow("{ Make: 'Chevy', Model: 'Corvette', Color: 'Blue', Year: 1956 }", false)]
-        [DataRow("{ Make: 'Chevy', Model: 'Corvette', Color: 'Blue', Year: 1956 }", true)]
+        [DataRow("{ 'Make': 'Chevy', 'Model': 'Corvette', 'Color': 'Blue', 'Year': 1956 }", false)]
+        [DataRow("{ 'Make': 'Chevy', 'Model': 'Corvette', 'Color': 'Blue', 'Year': 1956 }", true)]
         public async Task RestApi_Get_json(string response, bool typed)
         {
             using var api = CreateFactory(typed);
@@ -112,8 +113,8 @@ namespace MondoCore.Rest.UnitTests
         }
 
         [TestMethod]
-        [DataRow("[ { Make: 'Chevy', Model: 'Corvette', Color: 'Blue', Year: 1956 } ]", false)]
-        [DataRow("[ { Make: 'Chevy', Model: 'Corvette', Color: 'Blue', Year: 1956 } ]", true)]
+        [DataRow("[ { 'Make': 'Chevy', 'Model': 'Corvette', 'Color': 'Blue', 'Year': 1956 } ]", false)]
+        [DataRow("[ { 'Make': 'Chevy', 'Model': 'Corvette', 'Color': 'Blue', 'Year': 1956 } ]", true)]
         public async Task RestApi_Get_json_array(string response, bool typed)
         {
             using var api = CreateFactory(typed);
@@ -127,8 +128,8 @@ namespace MondoCore.Rest.UnitTests
         }
 
         [TestMethod]
-        [DataRow("[ { Make: 'Chevy', Model: 'Corvette', Color: 'Blue', Year: 1956 },  { Make: 'Pontiac', Model: 'Firebird', Color: 'Green', Year: 1969 } ]", false)]
-        [DataRow("[ { Make: 'Chevy', Model: 'Corvette', Color: 'Blue', Year: 1956 },  { Make: 'Pontiac', Model: 'Firebird', Color: 'Green', Year: 1969 } ]", true)]
+        [DataRow("[ { 'Make': 'Chevy', 'Model': 'Corvette', 'Color': 'Blue', 'Year': 1956 },  { 'Make': 'Pontiac', 'Model': 'Firebird', 'Color': 'Green', 'Year': 1969 } ]", false)]
+        [DataRow("[ { 'Make': 'Chevy', 'Model': 'Corvette', 'Color': 'Blue', 'Year': 1956 },  { 'Make': 'Pontiac', 'Model': 'Firebird', 'Color': 'Green', 'Year': 1969 } ]", true)]
         public async Task RestApi_Get_json_array2(string response, bool typed)
         {
             using var api = CreateFactory(typed);
@@ -149,8 +150,8 @@ namespace MondoCore.Rest.UnitTests
         #region Post
 
         [TestMethod]
-        [DataRow("{ Make: 'Chevy', Model: 'Corvette', Color: 'Blue', Year: 1956 }", false)]
-        [DataRow("{ Make: 'Chevy', Model: 'Corvette', Color: 'Blue', Year: 1956 }", true)]
+        [DataRow("{ 'Make': 'Chevy', 'Model': 'Corvette', 'Color': 'Blue', 'Year': 1956 }", false)]
+        [DataRow("{ 'Make': 'Chevy', 'Model': 'Corvette', 'Color': 'Blue', 'Year': 1956 }", true)]
         public async Task RestApi_Post_json(string response, bool typed)
         {
             using var api = CreateFactory(typed);
@@ -166,8 +167,8 @@ namespace MondoCore.Rest.UnitTests
         }
 
         [TestMethod]
-        [DataRow("{ Make: 'Chevy', Model: 'Corvette', Color: 'Blue', Year: 1956 }", false)]
-        [DataRow("{ Make: 'Chevy', Model: 'Corvette', Color: 'Blue', Year: 1956 }", true)]
+        [DataRow("{ 'Make': 'Chevy', 'Model': 'Corvette', 'Color': 'Blue', 'Year': 1956 }", false)]
+        [DataRow("{ 'Make': 'Chevy', 'Model': 'Corvette', 'Color': 'Blue', 'Year': 1956 }", true)]
         public async Task RestApi_Post_no_response(string response, bool typed)
         {
             using var api = CreateFactory(typed);
@@ -184,8 +185,8 @@ namespace MondoCore.Rest.UnitTests
         #region Put
 
         [TestMethod]
-        [DataRow("{ Make: 'Chevy', Model: 'Corvette', Color: 'Blue', Year: 1956 }", false)]
-        [DataRow("{ Make: 'Chevy', Model: 'Corvette', Color: 'Blue', Year: 1956 }", true)]
+        [DataRow("{ 'Make': 'Chevy', 'Model': 'Corvette', 'Color': 'Blue', 'Year': 1956 }", false)]
+        [DataRow("{ 'Make': 'Chevy', 'Model': 'Corvette', 'Color': 'Blue', 'Year': 1956 }", true)]
         public async Task RestApi_Put_json(string response, bool typed)
         {
             using var api = CreateFactory(typed);
@@ -205,8 +206,8 @@ namespace MondoCore.Rest.UnitTests
         #region Patch
 
         [TestMethod]
-        [DataRow("{ Make: 'Chevy', Model: 'Corvette', Color: 'Blue', Year: 1956 }", false)]
-        [DataRow("{ Make: 'Chevy', Model: 'Corvette', Color: 'Blue', Year: 1956 }", true)]
+        [DataRow("{ 'Make': 'Chevy', 'Model': 'Corvette', 'Color': 'Blue', 'Year': 1956 }", false)]
+        [DataRow("{ 'Make': 'Chevy', 'Model': 'Corvette', 'Color': 'Blue', 'Year': 1956 }", true)]
         public async Task RestApi_Patch_json(string response, bool typed)
         {
             using var api = CreateFactory(typed);
@@ -223,8 +224,8 @@ namespace MondoCore.Rest.UnitTests
 
 
         [TestMethod]
-        [DataRow("{ Make: 'Chevy', Model: 'Corvette', Color: 'Blue', Year: 1956 }", false)]
-        [DataRow("{ Make: 'Chevy', Model: 'Corvette', Color: 'Blue', Year: 1956 }", true)]
+        [DataRow("{ 'Make': 'Chevy', 'Model': 'Corvette', 'Color': 'Blue', 'Year': 1956 }", false)]
+        [DataRow("{ 'Make': 'Chevy', 'Model': 'Corvette', 'Color': 'Blue', 'Year': 1956 }", true)]
         public async Task RestApi_Patch_no_response(string response, bool typed)
         {
             using var api = CreateFactory(typed);
@@ -261,7 +262,7 @@ namespace MondoCore.Rest.UnitTests
 
             SetUpDelete();
 
-            var ex = await Assert.ThrowsExceptionAsync<RestException>( async ()=> await api.Delete("/test/2"));
+            var ex = await Assert.ThrowsAsync<RestException>( async ()=> await api.Delete("/test/2"));
 
             Assert.IsNotNull(ex);
             Assert.AreEqual("Rest Api Exception, Status Code = NotFound", ex.Message);
@@ -281,7 +282,7 @@ namespace MondoCore.Rest.UnitTests
 
             IRestApi<string> iapi = api;
 
-            var ex = await Assert.ThrowsExceptionAsync<TaskCanceledException>( async ()=> await iapi.Get<string>("name_timesout"));
+            var ex = await Assert.ThrowsAsync<TaskCanceledException>( async ()=> await iapi.Get<string>("name_timesout"));
 
             Assert.IsNotNull(ex.InnerException);
         }
@@ -298,7 +299,7 @@ namespace MondoCore.Rest.UnitTests
 
             using IRestApi<string> api = new RestApi<string>(client, "test", timeout: 200);
 
-            var ex = await Assert.ThrowsExceptionAsync<TaskCanceledException>( async ()=> await api.Get<string>("name_timesout", cancelTokenSrc.Token));
+            var ex = await Assert.ThrowsAsync<TaskCanceledException>( async ()=> await api.Get<string>("name_timesout", cancellationToken: cancelTokenSrc.Token));
 
             Assert.IsNotNull(ex.InnerException);
         }
@@ -315,7 +316,7 @@ namespace MondoCore.Rest.UnitTests
 
             IRestApi<string> iapi = api;
 
-            var result = await iapi.Get<string>("name");
+            var result = await iapi.Get<string>("name", cancellationToken: CancellationToken.None);
 
             Assert.AreEqual("bob", result);
         }
@@ -353,8 +354,11 @@ namespace MondoCore.Rest.UnitTests
             return new RestApi<string>(httpClient, "test", headerFactory: headers);
         }
 
-        private void SetUpGet(string body, int statusCode = 200, string contentType = "text/plain")
-        {
+        private void SetUpGet(string body, int statusCode = 200, string contentType = "text/plain", bool fixQuotes = true)
+        {  
+            if(fixQuotes)
+                body = body.Replace('\'', '"'); // WireMock doesn't like single quotes in json
+
             _server!.Given
             (
                 Request.Create().WithPath("/test/1").UsingGet()
@@ -370,6 +374,8 @@ namespace MondoCore.Rest.UnitTests
 
         private void SetUpGetWithDelay(string body, int statusCode = 200, string contentType = "text/plain", int delay = 0)
         {
+            body = body.Replace('\'', '"'); // WireMock doesn't like single quotes in json
+
             _server!.Given
             (
                 Request.Create().WithPath("/test/1").UsingGet()
@@ -386,6 +392,8 @@ namespace MondoCore.Rest.UnitTests
 
         private void SetUpPost(string body, int statusCode = 200, string contentType = "text/plain")
         {
+            body = body.Replace('\'', '"'); // WireMock doesn't like single quotes in json
+
             _server!.Given
             (
                 Request.Create().WithPath("/test").UsingPost()
@@ -401,6 +409,8 @@ namespace MondoCore.Rest.UnitTests
 
         private void SetUpPut(string body, int statusCode = 200, string contentType = "text/plain")
         {
+            body = body.Replace('\'', '"'); // WireMock doesn't like single quotes in json
+
             _server!.Given
             (
                 Request.Create().WithPath("/test/1").UsingPut()
@@ -416,6 +426,8 @@ namespace MondoCore.Rest.UnitTests
 
         private void SetUpPatch(string body, int statusCode = 200, string contentType = "text/plain")
         {
+            body = body.Replace('\'', '"'); // WireMock doesn't like single quotes in json
+
             _server!.Given
             (
                 Request.Create().WithPath("/test/1").UsingPatch()
